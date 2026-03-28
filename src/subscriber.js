@@ -21,7 +21,11 @@ console.log(`  토픽: ${topic}`);
 console.log(`  클라이언트 ID: ${clientId}`);
 console.log('');
 
-const client = mqtt.connect(brokerUrl, { clientId });
+const client = mqtt.connect(brokerUrl, {
+  clientId,
+  username: process.env.MQTT_USERNAME,
+  password: process.env.MQTT_PASSWORD,
+});
 
 client.on('connect', () => {
   console.log(`[${timestamp()}] 브로커 연결 성공`);

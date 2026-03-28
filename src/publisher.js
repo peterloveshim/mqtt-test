@@ -39,7 +39,11 @@ console.log(`  발행 주기: ${intervalMin}분 (${intervalMs / 1000}초)`);
 console.log(`  클라이언트 ID: ${clientId}`);
 console.log('');
 
-const client = mqtt.connect(brokerUrl, { clientId });
+const client = mqtt.connect(brokerUrl, {
+  clientId,
+  username: process.env.MQTT_USERNAME,
+  password: process.env.MQTT_PASSWORD,
+});
 
 let timer;
 

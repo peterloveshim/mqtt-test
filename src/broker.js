@@ -1,17 +1,44 @@
 import 'dotenv/config';
 import Aedes from 'aedes';
 import { createServer } from 'net';
+import { createServer as createHttpServer } from 'http';
+import { WebSocketServer, createWebSocketStream } from 'ws';
 
 const port = Number(process.env.MQTT_BROKER_PORT) || 1883;
-
-// Aedes 브로커 인스턴스 생성
-const aedes = new Aedes();
-const server = createServer(aedes.handle);
+const wsPort = Number(process.env.MQTT_WS_PORT) || 9001;
+const mqttUsername = process.env.MQTT_USERNAME;
+const mqttPassword = process.env.MQTT_PASSWORD;
 
 // 타임스탬프 포맷 헬퍼
 function timestamp() {
   return new Date().toLocaleString('ko-KR', { hour12: false });
 }
+
+// Aedes 브로커 인스턴스 생성
+const aedes = new Aedes();
+
+// username/password 인증
+aedes.authenticate = (client, username, password, callback) => {
+  const valid =
+    username === mqttUsername &&
+    password?.toString() === mqttPassword;
+  if (!valid) {
+    console.log(`[${timestamp()}] 인증 실패: ${client.id} (user: ${username})`);
+  }
+  callback(null, valid);
+};
+
+// TCP 서버 (포트 1883 — 내부/테스트용)
+const server = createServer(aedes.handle);
+
+// WebSocket 서버 (포트 9001 — 브라우저용)
+const httpServer = createHttpServer();
+const wss = new WebSocketServer({ server: httpServer });
+
+wss.on('connection', (conn) => {
+  const stream = createWebSocketStream(conn);
+  aedes.handle(stream);
+});
 
 // 클라이언트 연결
 aedes.on('client', (client) => {
@@ -42,9 +69,14 @@ aedes.on('publish', (packet, client) => {
   }
 });
 
-// 서버 시작
+// TCP 서버 시작
 server.listen(port, () => {
-  console.log(`[${timestamp()}] MQTT 브로커 시작 - 포트: ${port}`);
+  console.log(`[${timestamp()}] MQTT 브로커 시작 (TCP) - 포트: ${port}`);
+});
+
+// WebSocket 서버 시작
+httpServer.listen(wsPort, () => {
+  console.log(`[${timestamp()}] MQTT 브로커 시작 (WebSocket) - 포트: ${wsPort}`);
 });
 
 // Graceful Shutdown
@@ -52,8 +84,10 @@ function shutdown() {
   console.log(`\n[${timestamp()}] 브로커 종료 중...`);
   aedes.close(() => {
     server.close(() => {
-      console.log(`[${timestamp()}] 브로커 종료 완료`);
-      process.exit(0);
+      httpServer.close(() => {
+        console.log(`[${timestamp()}] 브로커 종료 완료`);
+        process.exit(0);
+      });
     });
   });
 }
