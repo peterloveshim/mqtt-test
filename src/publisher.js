@@ -4,13 +4,10 @@ import mqtt from 'mqtt';
 const brokerUrl = process.env.MQTT_BROKER_URL || 'mqtt://localhost:1883';
 const topic = process.env.MQTT_TOPIC || 'sensor/temperature';
 
-// CLI 인자 파싱: --interval N (분 단위)
-const args = process.argv.slice(2);
-const intervalArgIdx = args.indexOf('--interval');
-const intervalMin = intervalArgIdx !== -1
-  ? Number(args[intervalArgIdx + 1])
-  : Number(process.env.MQTT_PUBLISH_INTERVAL_MIN) || 1;
-const intervalMs = intervalMin * 60 * 1000;
+// 1~60초 사이 랜덤 딜레이(ms) 생성
+function randomIntervalMs() {
+  return (Math.floor(Math.random() * 60) + 1) * 1000;
+}
 
 const clientId = `mqtt-test-pub-${Math.random().toString(36).slice(2, 6)}`;
 
@@ -35,7 +32,7 @@ function generateSensorData() {
 console.log(`[${timestamp()}] 퍼블리셔 시작`);
 console.log(`  브로커: ${brokerUrl}`);
 console.log(`  토픽: ${topic}`);
-console.log(`  발행 주기: ${intervalMin}분 (${intervalMs / 1000}초)`);
+console.log(`  발행 주기: 1~60초 랜덤`);
 console.log(`  클라이언트 ID: ${clientId}`);
 console.log('');
 
@@ -50,16 +47,14 @@ let timer;
 client.on('connect', () => {
   console.log(`[${timestamp()}] 브로커 연결 성공`);
 
-  // 연결 즉시 첫 메시지 발행
+  // 연결 즉시 첫 메시지 발행 후 랜덤 주기로 반복
   publish();
-
-  // 이후 주기적으로 발행
-  timer = setInterval(publish, intervalMs);
 });
 
 function publish() {
   const data = generateSensorData();
   const payload = JSON.stringify(data);
+  const nextMs = randomIntervalMs();
 
   client.publish(topic, payload, { qos: 1 }, (err) => {
     if (err) {
@@ -67,9 +62,12 @@ function publish() {
     } else {
       console.log(`[${timestamp()}] 발행 → ${topic}`);
       console.log(`  온도: ${data.temperature}°C | 습도: ${data.humidity}% | 시퀀스: #${data.sequence}`);
+      console.log(`  다음 발행까지: ${nextMs / 1000}초`);
       console.log('');
     }
   });
+
+  timer = setTimeout(publish, nextMs);
 }
 
 client.on('reconnect', () => {
@@ -87,7 +85,7 @@ client.on('error', (err) => {
 // Graceful Shutdown
 function shutdown() {
   console.log(`\n[${timestamp()}] 퍼블리셔 종료 중...`);
-  clearInterval(timer);
+  clearTimeout(timer);
   client.end(false, () => {
     console.log(`[${timestamp()}] 퍼블리셔 종료 완료`);
     process.exit(0);
