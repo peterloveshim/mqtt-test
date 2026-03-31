@@ -4,9 +4,9 @@ import mqtt from 'mqtt';
 const brokerUrl = process.env.MQTT_BROKER_URL || 'mqtt://localhost:1883';
 const topic = process.env.MQTT_TOPIC || 'sensor/temperature';
 
-// 1~60초 사이 랜덤 딜레이(ms) 생성
+// 30~120초 사이 랜덤 딜레이(ms) 생성
 function randomIntervalMs() {
-  return (Math.floor(Math.random() * 60) + 1) * 1000;
+  return (Math.floor(Math.random() * 91) + 30) * 1000;
 }
 
 const clientId = `mqtt-test-pub-${Math.random().toString(36).slice(2, 6)}`;
@@ -32,7 +32,7 @@ function generateSensorData() {
 console.log(`[${timestamp()}] 퍼블리셔 시작`);
 console.log(`  브로커: ${brokerUrl}`);
 console.log(`  토픽: ${topic}`);
-console.log(`  발행 주기: 1~60초 랜덤`);
+console.log(`  발행 주기: 30~120초 랜덤`);
 console.log(`  클라이언트 ID: ${clientId}`);
 console.log('');
 
