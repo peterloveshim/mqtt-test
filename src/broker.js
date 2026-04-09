@@ -23,6 +23,9 @@ aedes.authenticate = (client, username, password, callback) => {
   console.log("password", password?.toString());
   console.log("mqttUsername", mqttUsername);
   console.log("mqttPassword", mqttPassword);
+
+  console.log("valid 1 ", username === mqttUsername);
+  console.log("valid 2 ", password?.toString() === mqttPassword);
   const valid =
     username === mqttUsername && password?.toString() === mqttPassword;
   if (!valid) {
