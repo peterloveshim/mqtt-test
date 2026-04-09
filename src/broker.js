@@ -20,7 +20,7 @@ const aedes = new Aedes();
 // username/password 인증
 aedes.authenticate = (client, username, password, callback) => {
   console.log("username", username);
-  console.log("password", password);
+  console.log("password", password?.toString());
   console.log("mqttUsername", mqttUsername);
   console.log("mqttPassword", mqttPassword);
   const valid =
